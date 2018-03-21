@@ -62,7 +62,7 @@ public class LuaFormatter {
 		if (f.isDirectory()) {
 			for (File f1 : new FileIterator(fn)) {
 				String name = f1.getName();
-				if (name.endsWith(".lua")) {
+				if (name.endsWith(".lua") && !name.endsWith(".fmt.lua") && !name.endsWith(".fmt-err.lua")) {
 					fs.add(f1.getAbsolutePath());
 				}
 			}
@@ -99,6 +99,10 @@ public class LuaFormatter {
 			String txt = FileUtil.readString(new FileInputStream(fn), encoding);
 			try {
 				String res = format(txt);
+				if (indent != 0) {
+					indent = 0;
+					throw new RuntimeException("indent not correct:" + fn);
+				}
 				File f2 = new File(fn + (overwritesource ? "" : ".fmt.lua"));
 				FileUtil.save(res.getBytes(encoding), f2.getAbsolutePath());
 				System.out.println("wrote to " + f2.getAbsolutePath());
@@ -337,7 +341,7 @@ public class LuaFormatter {
 	}
 
 	private boolean isMultiLineToken(String token) {
-		return token.startsWith("--[") && token.endsWith("]") ;//&& token.contains("\n");
+		return token.startsWith("--[") && token.endsWith("]");// && token.contains("\n");
 	}
 
 	private void printIndent() {

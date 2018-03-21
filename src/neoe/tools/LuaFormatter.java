@@ -191,7 +191,7 @@ public class LuaFormatter {
 						cnt++;
 					}
 				}
-				if (cnt <= 0 && !lastType.equals(LuaTokenType.SPACE)) {
+				if (cnt <= 0) {
 					sb.append(" ");
 				} else {
 					if (changedLine > 0) {
@@ -403,6 +403,7 @@ public class LuaFormatter {
 	private void addSpace() {
 		if (!lastType.equals(LuaTokenType.SPACE) && !".".equals(lastToken)) {
 			sb.append(" ");
+			lastType=LuaTokenType.SPACE;
 		}
 	}
 

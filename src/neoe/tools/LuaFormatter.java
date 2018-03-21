@@ -36,6 +36,7 @@ public class LuaFormatter {
 		String res = format(txt);
 		File f2 = new File(fn + /* "." + ts() + */ ".fmt.lua");
 		FileUtil.save(res.getBytes("UTF8"), f2.getAbsolutePath());
+		System.out.println("wrote to "+f2.getAbsolutePath());
 		if (DEBUG)
 			debug.close();
 	}
@@ -126,10 +127,11 @@ public class LuaFormatter {
 		} else if (type.equals(LuaTokenType.IDENTIFIER)) {
 			if ("end".equals(token)) {
 				String key = decIndent();
-				if (changedLine > 0) {
-					printIndent();
-					changedLine = 0;
+				if (changedLine <= 0) {
+					sb.append("\n");
 				}
+				printIndent();
+				changedLine = 0;
 
 				sb.append(token);
 				changeLine();
@@ -138,18 +140,23 @@ public class LuaFormatter {
 				}
 			} else if ("else".equals(token)) {
 				String key = decIndent();
-				if (changedLine > 0) {
-					printIndent();
-					changedLine = 0;
+				if (changedLine <= 0) {
+					sb.append("\n");
 				}
+				printIndent();
+				changedLine = 0;
 				sb.append(token);
 				incIndent(key);
+				changeLine();
+
 			} else if ("elseif".equals(token)) {
 				String key = decIndent();
-				if (changedLine > 0) {
-					printIndent();
-					changedLine = 0;
+				if (changedLine <= 0) {
+					sb.append("\n");
 				}
+				printIndent();
+				changedLine = 0;
+
 				sb.append(token);
 				incIndent(key);
 			} else {
@@ -185,7 +192,9 @@ public class LuaFormatter {
 
 			}
 
-		} else if (type.equals(LuaTokenType.OPERATOR) && token.startsWith("}")) {
+		} else if (type.equals(LuaTokenType.OPERATOR) && token.startsWith("}"))
+
+		{
 			String key = decIndent();
 			if (changedLine > 0) {
 				printIndent();

@@ -337,7 +337,7 @@ public class LuaFormatter {
 	}
 
 	private boolean isMultiLineToken(String token) {
-		return token.endsWith("]--");
+		return token.startsWith("--[") && token.endsWith("]") ;//&& token.contains("\n");
 	}
 
 	private void printIndent() {
@@ -403,7 +403,7 @@ public class LuaFormatter {
 	private void addSpace() {
 		if (!lastType.equals(LuaTokenType.SPACE) && !".".equals(lastToken)) {
 			sb.append(" ");
-			lastType=LuaTokenType.SPACE;
+			lastType = LuaTokenType.SPACE;
 		}
 	}
 

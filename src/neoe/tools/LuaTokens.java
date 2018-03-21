@@ -56,10 +56,6 @@ public class LuaTokens {
 				readUntil("\n");
 			} else {
 				readUntilLongBrackets(level);
-				if (peek(0) == '-' && peek(1) == '-') {
-					p += 2;
-					sb.append("--");
-				}
 			}
 
 			return submit(type, sb.toString());

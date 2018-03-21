@@ -6,17 +6,81 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 
+import neoe.util.FileIterator;
 import neoe.util.FileUtil;
 
 public class LuaFormatter {
 
-	private static final boolean TESTING_LEVEL = false;
-	private static final boolean DEBUG = false;
+	private static boolean TESTING_LEVEL = false;
+	private static boolean DEBUG = false;
 
 	public static void main(String[] args) throws Exception {
-		new LuaFormatter().formatFile(args[0]);
+		if (args.length == 0) {
+			usage();
+		} else {
+			new LuaFormatter().run(args);
+		}
+
+	}
+
+	private static void usage() {
+		System.out.println(
+				"luaformatter: args:\n -o  -- overwrite source\n -e<ENCODING> -- use ENCODING\n -d -- debug\n  input-files\n");
+
+	}
+
+	List<String> fs = new ArrayList<>();
+	private String encoding = "utf8";
+	private boolean overwritesource = false;
+
+	public void run(String[] args) throws Exception {
+
+		for (String s : args) {
+			if (s.startsWith("-")) {
+				doOpt(s);
+			} else {
+				addFile(s);
+			}
+		}
+		if (fs.isEmpty()) {
+			System.out.println("no input files");
+
+		} else {
+			for (String fn : fs) {
+				formatFile(fn);
+			}
+		}
+
+	}
+
+	private void addFile(String fn) {
+		File f = new File(fn);
+		if (f.isDirectory()) {
+			for (File f1 : new FileIterator(fn)) {
+				String name = f1.getName();
+				if (name.endsWith(".lua")) {
+					fs.add(f1.getAbsolutePath());
+				}
+			}
+		} else if (f.isFile()) {
+			fs.add(fn);
+		}
+	}
+
+	private void doOpt(String s) {
+		if (s.startsWith("-e")) {
+			encoding = s.substring(2);
+		} else if (s.startsWith("-o")) {
+			overwritesource = true;
+		} else if (s.startsWith("-d")) {
+			DEBUG = true;
+			TESTING_LEVEL = true;
+			overwritesource = false;
+		}
 
 	}
 
@@ -26,19 +90,31 @@ public class LuaFormatter {
 
 	private Writer debug;
 
-	public void formatFile(String fn) throws Exception {
-		if (DEBUG)
-			debug = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("debug.log"), "utf8"));
-		if (DEBUG)
-			debug.write("read " + fn + "\n");
-		String txt = FileUtil.readString(new FileInputStream(fn), "GBK");
+	public void formatFile(String fn) {
+		try {
+			if (DEBUG)
+				debug = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("debug.log"), "utf8"));
+			if (DEBUG)
+				debug.write("read " + fn + "\n");
+			String txt = FileUtil.readString(new FileInputStream(fn), encoding);
+			try {
+				String res = format(txt);
+				File f2 = new File(fn + (overwritesource ? "" : ".fmt.lua"));
+				FileUtil.save(res.getBytes(encoding), f2.getAbsolutePath());
+				System.out.println("wrote to " + f2.getAbsolutePath());
+			} catch (Exception e) {
+				e.printStackTrace();
+				File f2 = new File(fn + ".fmt-err.lua");
+				FileUtil.save(sb.toString().getBytes(encoding), f2.getAbsolutePath());
+				System.out.println("wrote to " + f2.getAbsolutePath());
+			}
 
-		String res = format(txt);
-		File f2 = new File(fn + /* "." + ts() + */ ".fmt.lua");
-		FileUtil.save(res.getBytes("UTF8"), f2.getAbsolutePath());
-		System.out.println("wrote to "+f2.getAbsolutePath());
-		if (DEBUG)
-			debug.close();
+			if (DEBUG)
+				debug.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.err.printf("when formatting [%s]\n", fn);
+		}
 	}
 
 	StringBuilder sb;
@@ -63,8 +139,10 @@ public class LuaFormatter {
 			String token = (String) tt[1];
 			if (token == null)
 				break;
-			if (DEBUG)
+			if (DEBUG) {
 				debug.write(String.format("t:%s,v:%s\n", type, token));
+				debug.flush();
+			}
 
 			addToken(type, token);
 
@@ -159,6 +237,14 @@ public class LuaFormatter {
 
 				sb.append(token);
 				incIndent(key);
+			} else if ("until".equals(token)) {
+				decIndent();
+				if (changedLine <= 0) {
+					sb.append("\n");
+				}
+				printIndent();
+				changedLine = 0;
+				sb.append(token);
 			} else {
 				if (changedLine > 0) {
 					printIndent();
@@ -170,9 +256,6 @@ public class LuaFormatter {
 					loop(type, ")", LuaTokenType.OPERATOR);
 					changeLine();
 					incIndent(token);
-				} else if ("until".equals(token)) {
-					decIndent();
-					changeLine();
 				} else if ("while".equals(token)) {
 					loop(type, "do", null);
 					incIndent(token);
@@ -186,8 +269,9 @@ public class LuaFormatter {
 					incIndent(token);
 					changeLine();
 				} else if ("repeat".equals(token)) {
-					decIndent();
 					changeLine();
+					incIndent(token);
+					loop(LuaTokenType.SPACE, "until", null);
 				}
 
 			}

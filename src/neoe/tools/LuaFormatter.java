@@ -249,6 +249,14 @@ public class LuaFormatter {
 				printIndent();
 				changedLine = 0;
 				sb.append(token);
+			} else if ("do".equals(token)) {
+				if (changedLine > 0) {
+					printIndent();
+					changedLine = 0;
+				}
+				sb.append(token);
+				incIndent(token);
+				changeLine();
 			} else {
 				if (changedLine > 0) {
 					printIndent();
@@ -262,12 +270,10 @@ public class LuaFormatter {
 					incIndent(token);
 				} else if ("while".equals(token)) {
 					loop(type, "do", null);
-					incIndent(token);
-					changeLine();
+
 				} else if ("for".equals(token)) {
 					loop(type, "do", null);
-					incIndent(token);
-					changeLine();
+
 				} else if ("if".equals(token)) {
 					loop(type, "then", null);
 					incIndent(token);

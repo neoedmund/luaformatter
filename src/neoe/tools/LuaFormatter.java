@@ -177,35 +177,33 @@ public class LuaFormatter {
 			addSpace();
 			if (!isMultiLineToken(token)) {
 				sb.append(normalComment(token.trim()));
-				changeLine();
+				sb.append("\n");
 			} else {
 				sb.append(token);
 			}
 
 		} else if (type.equals(LuaTokenType.SPACE)) {
-
-			if (!lastType.equals(LuaTokenType.SPACE)) {
-				int cnt = 0;
-				for (char c : token.toCharArray()) {
-					if (c == '\n') {
-						if (cnt >= changedLine) {
-							// sb.append("[A]");
-							sb.append(c);
-						}
-						cnt++;
+			// if (!lastType.equals(LuaTokenType.SPACE)) {
+			int cnt = 0;
+			for (char c : token.toCharArray()) {
+				if (c == '\n') {
+					if (cnt >= changedLine) {
+						sb.append(c);
 					}
-				}
-				if (cnt <= 0) {
-					sb.append(" ");
-				} else {
-					if (changedLine > 0) {
-						printIndent();
-						changedLine = 0;
-					} else {
-						changedLine = cnt;
-					}
+					cnt++;
 				}
 			}
+			if (cnt <= 0) {
+				sb.append(" ");
+			} else {
+				if (changedLine > 0) {
+					printIndent();
+					changedLine = 0;
+				} else {
+					changedLine = cnt;
+				}
+			}
+			// }
 		} else if (type.equals(LuaTokenType.IDENTIFIER)) {
 			if ("end".equals(token)) {
 				String key = decIndent();

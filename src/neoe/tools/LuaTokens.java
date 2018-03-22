@@ -66,7 +66,18 @@ public class LuaTokens {
 			type = LuaTokenType.STRING;
 			sb.append(c);
 			p++;
-			readUntil("" + (char) c);
+			while (true) {
+				if (p >= txt.length())
+					break;
+				char c2 = txt.charAt(p++);
+				sb.append(c2);
+				if (c2 == c) {
+					break;
+				} else if (c2 == '\\') {
+					sb.append(txt.charAt(p++));
+				}
+			}
+//			readUntil("" + (char) c);
 			return submit(type, sb.toString());
 		} else {
 			int level = peekLongBrackets();

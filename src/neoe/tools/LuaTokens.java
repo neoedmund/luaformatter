@@ -1,5 +1,8 @@
 package neoe.tools;
 
+import java.util.Arrays;
+import java.util.List;
+
 public class LuaTokens {
 
 	private String txt;
@@ -33,7 +36,7 @@ public class LuaTokens {
 				}
 			}
 			return submit(type, sb.toString());
-		} else if (isIdentifier(c)) {
+		} else if (isIdentifier(c) || (/* negtive number */c == '-' && Character.isDigit(peek(1)))) {
 			type = LuaTokenType.IDENTIFIER;
 			sb.append(c);
 			p++;
@@ -71,26 +74,17 @@ public class LuaTokens {
 				type = LuaTokenType.OPERATOR;
 				sb.append(c);
 				p++;
-				if (isOp1(c)) {
 
-				} else {
-					char c2;
-					while (p < txt.length()) {
-						if (isOperator(c2 = txt.charAt(p))) {
-							sb.append(c2);
-							p++;
-						} else {
-							break;
-						}
+				while (true) {
+					String t = sb.toString() + (char) peek(0);
+
+					if (longOperaters.contains(t)) {
+						sb.append(txt.charAt(p++));
+					} else {
+						break;
 					}
 				}
-				if (false) {
-					String s1 = sb.toString();
-					for (int i = 0; i < s1.length(); i++) {
-						System.out.printf("%d:%c ", (int) sb.charAt(i), sb.charAt(i));
-					}
-					System.out.println();
-				}
+
 				return submit(type, sb.toString());
 			} else {
 				type = LuaTokenType.STRING;
@@ -100,17 +94,19 @@ public class LuaTokens {
 		}
 	}
 
-	private boolean isOp1(char c) {
-		return "[]{}()".indexOf(c) >= 0;
-	}
+	List<String> longOperaters = Arrays.asList(new String[] { "<=", ">=", "==", "~=", "//", ">>", "<<" });
+
+	// private boolean isOp1(char c) {
+	// return "[]{}()".indexOf(c) >= 0;
+	// }
 
 	private Object[] submit(LuaTokenType type, String s) {
 		return new Object[] { type, s };
 	}
 
-	private boolean isOperator(char c) {
-		return !isIdentifier(c) && !isSpace(c) && c != '"' && c != '\'' && !isOp1(c);
-	}
+	// private boolean isOperator(char c) {
+	// return !isIdentifier(c) && !isSpace(c) && c != '"' && c != '\'' && !isOp1(c);
+	// }
 
 	private void readUntilLongBrackets(int level) {
 		// sb.append("<LV:" + level + ">");

@@ -149,6 +149,7 @@ public class LuaTokens {
 		int p1 = txt.indexOf(s, p);
 		if (p1 < 0) {
 			sb.append(txt.substring(p));
+			p = txt.length();
 		} else {
 			sb.append(txt.substring(p, p1 + s.length()));
 			p = p1 + s.length();

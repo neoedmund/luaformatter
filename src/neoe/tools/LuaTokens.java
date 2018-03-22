@@ -94,7 +94,7 @@ public class LuaTokens {
 		}
 	}
 
-	List<String> longOperaters = Arrays.asList(new String[] { "<=", ">=", "==", "~=", "//", ">>", "<<" });
+	final static List<String> longOperaters = Arrays.asList(new String[] { "<=", ">=", "==", "~=", "//", ">>", "<<" });
 
 	// private boolean isOp1(char c) {
 	// return "[]{}()".indexOf(c) >= 0;

@@ -193,16 +193,18 @@ public class LuaFormatter {
 					cnt++;
 				}
 			}
-			if (cnt <= 0) {
-				if (!lastType.equals(LuaTokenType.SPACE)) {
+			if (!lastType.equals(LuaTokenType.SPACE)) {
+				if (cnt <= 0) {
+
 					sb.append(" ");
-				}
-			} else {
-				if (changedLine > 0) {
-					printIndent();
-					changedLine = 0;
+
 				} else {
-					changedLine = cnt;
+					if (changedLine > 0) {
+						printIndent();
+						changedLine = 0;
+					} else {
+						changedLine = cnt;
+					}
 				}
 			}
 			// }

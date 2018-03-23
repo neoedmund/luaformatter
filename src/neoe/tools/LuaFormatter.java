@@ -48,7 +48,6 @@ public class LuaFormatter {
 		}
 		if (fs.isEmpty()) {
 			System.out.println("no input files");
-
 		} else {
 			for (String fn : fs) {
 				formatFile(fn);
@@ -84,23 +83,20 @@ public class LuaFormatter {
 
 	}
 
-	public static String ts() {
-		return Long.toString(System.currentTimeMillis(), 36);
-	}
-
 	private Writer debug;
 
 	public void formatFile(String fn) {
 		try {
+			Env env = new Env();
 			if (DEBUG)
 				debug = new BufferedWriter(new OutputStreamWriter(new FileOutputStream("debug.log"), "utf8"));
 			if (DEBUG)
 				debug.write("read " + fn + "\n");
 			String txt = FileUtil.readString(new FileInputStream(fn), encoding);
 			try {
-				String res = format(txt);
-				if (indent != 0) {
-					indent = 0;
+				String res = format(txt, env);
+				if (env.indent != 0) {
+					env.indent = 0;
 					throw new RuntimeException("indent not correct:" + fn);
 				}
 				File f2 = new File(fn + (overwritesource ? "" : ".fmt.lua"));
@@ -124,17 +120,16 @@ public class LuaFormatter {
 	StringBuilder sb;
 	LuaTokens tokens;
 
-	public String format(String txt) throws Exception {
+	public String format(String txt, Env env) throws Exception {
 		sb = new StringBuilder();
 		tokens = new LuaTokens(txt);
-		loop(LuaTokenType.SPACE, null, null);
-
+		loop(LuaTokenType.SPACE, null, null, env);
 		return sb.toString();
 	}
 
-	private void loop(LuaTokenType preType, String until, LuaTokenType operator) throws Exception {
-		lastType = preType;
-		addSpace();
+	private void loop(LuaTokenType preType, String until, LuaTokenType operator, Env env) throws Exception {
+		env.lastType = preType;
+		addSpaceOnNeed(env);
 		while (true) {
 			Object[] tt = tokens.next();
 			if (tt == null)
@@ -143,12 +138,13 @@ public class LuaFormatter {
 			String token = (String) tt[1];
 			if (token == null)
 				break;
+
 			if (DEBUG) {
 				debug.write(String.format("t:%s,v:%s\n", type, token));
 				debug.flush();
 			}
 
-			addToken(type, token);
+			addToken(type, token, env);
 
 			if (LuaTokenType.OPERATOR.equals(operator) && token.indexOf(until) >= 0) {
 				break;
@@ -160,177 +156,145 @@ public class LuaFormatter {
 
 	}
 
-	LuaTokenType lastType = LuaTokenType.SPACE;
-	private int indent;
-	private int changedLine;
-	private String lastToken;
-	private boolean forcedChangeLine;
-	private Stack stack = new Stack();
+	static class Env {
+		LuaTokenType lastType = LuaTokenType.SPACE;
+		int indent;
+		int changedLine;
+		String lastToken;
+		boolean forcedChangeLine;
+		Stack stack = new Stack();
+	}
 
-	private void addToken(LuaTokenType type, String token) throws Exception {
-		forcedChangeLine = false;
+	private void addToken(LuaTokenType type, String token, Env env) throws Exception {
+		env.forcedChangeLine = false;
 		if (type.equals(LuaTokenType.COMMENT)) {
-			if (changedLine > 0) {
-				printIndent();
-				changedLine = 0;
-			}
-			addSpace();
-			if (!isMultiLineToken(token)) {
-				sb.append(normalComment(token.trim()));
-				changeLine();
-			} else {
+			pre(env);
+			if (isMultiLineToken(token)) {
 				sb.append(token);
+			} else {
+				sb.append(normalComment(token.trim()));
 			}
 
 		} else if (type.equals(LuaTokenType.SPACE)) {
-			// if (!lastType.equals(LuaTokenType.SPACE)) {
-			int cnt = 0;
-			for (char c : token.toCharArray()) {
-				if (c == '\n') {
-					if (cnt >= changedLine) {
-						sb.append(c);
-					}
-					cnt++;
-				}
-			}
-			if (!lastType.equals(LuaTokenType.SPACE)) {
-				if (cnt <= 0) {
+			// sb.append("<sp cl=" + env.changedLine + ">");
+			int cnt = printSpaceLines(env, token);
 
-					sb.append(" ");
-
-				} else {
-					if (changedLine > 0) {
-						printIndent();
-						changedLine = 0;
-					} else {
-						changedLine = cnt;
-					}
-				}
+			if (cnt <= 0) {
+				addSpaceOnNeed(env);
+			} else {
+				env.changedLine = cnt;
 			}
-			// }
+			// sb.append("</sp>");
+
 		} else if (type.equals(LuaTokenType.IDENTIFIER)) {
-			if ("end".equals(token)) {
-				String key = decIndent();
-				if (changedLine <= 0) {
-					sb.append("\n");
-				}
-				printIndent();
-				changedLine = 0;
 
-				sb.append(token);
-				changeLine();
+			if ("end".equals(token)) {
+				String key = decIndent(env);
+				changeLineOnNeed(env);
+				printToken(env, token);
+				changeLineOnNeed(env);
 				if ("function".equals(key)) {
 					sb.append("\n");
+					env.changedLine++;
 				}
 			} else if ("else".equals(token)) {
-				String key = decIndent();
-				if (changedLine <= 0) {
-					sb.append("\n");
-				}
-				printIndent();
-				changedLine = 0;
-				sb.append(token);
-				incIndent(key);
-				changeLine();
-
+				String key = decIndent(env);
+				changeLineOnNeed(env);
+				printToken(env, token);
+				incIndent(env, key);
+				changeLineOnNeed(env);
 			} else if ("elseif".equals(token)) {
-				String key = decIndent();
-				if (changedLine <= 0) {
-					sb.append("\n");
-				}
-				printIndent();
-				changedLine = 0;
-
-				sb.append(token);
-				incIndent(key);
+				changeLineOnNeed(env);
+				String key = decIndent(env);
+				printToken(env, token);
 			} else if ("until".equals(token)) {
-				decIndent();
-				if (changedLine <= 0) {
-					sb.append("\n");
-				}
-				printIndent();
-				changedLine = 0;
-				sb.append(token);
+				decIndent(env);
+				printToken(env, token);
 			} else if ("do".equals(token)) {
-				if (changedLine > 0) {
-					printIndent();
-					changedLine = 0;
-				}
-				sb.append(token);
-				incIndent(token);
-				changeLine();
+				printToken(env, token);
+				incIndent(env, token);
+				changeLineOnNeed(env);
+			} else if ("local".equals(token)) {
+				changeLineOnNeed(env);
+				printToken(env, token);
+			} else if ("if".equals(token)) {
+				changeLineOnNeed(env);
+				printToken(env, token);
+			} else if ("then".equals(token)) {
+				printToken(env, token);
+				forceChangeLine(env);
+				incIndent(env, token);
+			} else if ("function".equals(token)) {
+				printToken(env, token);
+				env.changedLine = 0;
+				loop(type, ")", LuaTokenType.OPERATOR, env);
+				forceChangeLine(env);
+				incIndent(env, token);
+			} else if ("while".equals(token)) {
+				changeLineOnNeed(env);
+				printToken(env, token);
+			} else if ("for".equals(token)) {
+				changeLineOnNeed(env);
+				printToken(env, token);
+			} else if ("print".equals(token)) {
+				changeLineOnNeed(env);
+				printToken(env, token);
+			} else if ("repeat".equals(token)) {
+				changeLineOnNeed(env);
+				printToken(env, token);
+				forceChangeLine(env);
+				incIndent(env, token);
+				loop(type, "until", null, env);
 			} else {
-				if (changedLine > 0) {
-					printIndent();
-					changedLine = 0;
-				}
-				addSpace();
+				printToken(env, token);
+			}
+
+		} else if (type.equals(LuaTokenType.OPERATOR)) {
+			if (token.equals(".")) {
 				sb.append(token);
-				if ("function".equals(token)) {
-					loop(type, ")", LuaTokenType.OPERATOR);
-					changeLine();
-					incIndent(token);
-				} else if ("while".equals(token)) {
-					loop(type, "do", null);
-				} else if ("for".equals(token)) {
-					loop(type, "do", null);
-				} else if ("if".equals(token)) {
-					loop(type, "then", null);
-					incIndent(token);
-					changeLine();
-				} else if ("repeat".equals(token)) {
-					changeLine();
-					incIndent(token);
-					loop(type, "until", null);
-				}
-
-			}
-
-		} else if (type.equals(LuaTokenType.OPERATOR) && token.startsWith("}")) {
-			String key = decIndent();
-			if (changedLine > 0) {
-				printIndent();
-				changedLine = 0;
+			} else if ("}])".indexOf(token) >= 0) {
+				decIndent(env);
+				printToken(env, token);
+			} else if ("{[(".indexOf(token) >= 0) {
+				printToken(env, token);
+				incIndent(env, token);
 			} else {
-				addSpace();
+				printToken(env, token);
 			}
-			sb.append(token);
-			if (indent == 0) {
-				sb.append("\n");
-			}
-		} else if (type.equals(LuaTokenType.OPERATOR) && token.equals(".")) {
-			sb.append(token);
 		} else {
-			if (changedLine > 0) {
-				printIndent();
-				changedLine = 0;
-			}
-			addSpace();
-			sb.append(token);
-			if (type.equals(LuaTokenType.OPERATOR)) {
-				for (char c : token.toCharArray()) {
-					if (c == '{') {
-						incIndent("{");
-					} else if (c == '}') {
-						decIndent();
-					} else if (c == ')') {
-						decIndent();
-					} else if (c == '(') {
-						incIndent("(");
-					} else if (c == ']') {
-						decIndent();
-					} else if (c == '[') {
-						incIndent("[");
-					}
-				}
+			printToken(env, token);
+		}
+		env.lastType = type;
+		env.lastToken = token;
 
+	}
+
+	private void printToken(Env env, String token) {
+		pre(env);
+		sb.append(token);
+	}
+
+	private int printSpaceLines(Env env, String token) {
+		int cnt = 0;
+		for (char c : token.toCharArray()) {
+			if (c == '\n') {
+				if (cnt >= env.changedLine) {
+					newline();
+				}
+				cnt++;
 			}
 		}
-		lastType = type;
-		lastToken = token;
+		return cnt;
+	}
 
-		if (forcedChangeLine) {
-			lastType = LuaTokenType.SPACE;
+	/** print indent if in newline or add a space */
+	private void pre(Env env) {
+		// sb.append("[cl=" + env.changedLine + "]");
+		if (env.changedLine > 0) {
+			printIndent(env);
+			env.changedLine = 0;
+		} else {
+			addSpaceOnNeed(env);
 		}
 
 	}
@@ -348,70 +312,61 @@ public class LuaFormatter {
 		return token.startsWith("--[") && token.endsWith("]");// && token.contains("\n");
 	}
 
-	private void printIndent() {
+	private void printIndent(Env env) {
 		if (TESTING_LEVEL)
-			sb.append("[" + indent + "]");
-		for (int i = 0; i < indent; i++) {
+			sb.append("[" + env.indent + "]");
+		for (int i = 0; i < env.indent; i++) {
 			sb.append("\t");
 		}
-		// if (indent > 0)
-		lastType = LuaTokenType.SPACE;
 	}
 
-	// private void passToOP(String s) {
-	// while (true) {
-	// Object[] tt = tokens.next();
-	// if (tt == null) {
-	// return;
-	// }
-	// String token = (String) tt[1];
-	// sb.append(token);
-	// if (LuaTokenType.OPERATOR.equals(tt[0]) && token.indexOf(s) >= 0) {
-	// return;
-	// }
-	// }
-	//
-	// }
-
-	private void incIndent(String key) {
+	private void incIndent(Env env, String key) {
 		// sb.append("[i++]");
-		indent++;
-		stack.push(key);
+		env.indent++;
+		env.stack.push(key);
 	}
 
-	// private void passTo(String s) {
-	// while (true) {
-	// Object[] tt = tokens.next();
-	// if (tt == null) {
-	// return;
-	// }
-	// String token = (String) tt[1];
-	// sb.append(token);
-	// if (token.equals(s)) {
-	// return;
-	// }
-	// }
-	//
-	// }
-
-	private void changeLine() {
-		if (changedLine <= 0) {
-			sb.append("\n");
+	private void changeLineOnNeed(Env env) {
+		if (env.changedLine <= 0) {
+			newline();
+			env.forcedChangeLine = true;
+			env.changedLine = 1;
 		}
-		changedLine = 1;
-		forcedChangeLine = true;
+
 	}
 
-	private String decIndent() {
-		indent--;
+	private void newline() {
+		int p = sb.length();
+		while (true) {
+			if (p <= 0)
+				break;
+			char c = sb.charAt(p - 1);
+			if (c == ' ' || c == '\t') {
+				p--;
+				sb.setLength(p);
+			} else
+				break;
+		}
+		sb.append("\n");
+	}
+
+	private void forceChangeLine(Env env) {
+		newline();
+		env.forcedChangeLine = true;
+		env.changedLine = 1;
+	}
+
+	private String decIndent(Env env) {
+		env.indent--;
 		// if (stack.isEmpty()) return "";
-		return (String) stack.pop();
+		return (String) env.stack.pop();
 	}
 
-	private void addSpace() {
-		if (!lastType.equals(LuaTokenType.SPACE) && !".".equals(lastToken)) {
+	private void addSpaceOnNeed(Env env) {
+		if (!env.lastType.equals(LuaTokenType.SPACE) && !".".equals(env.lastToken) && env.changedLine <= 0) {
 			sb.append(" ");
-			lastType = LuaTokenType.SPACE;
+			env.lastType = LuaTokenType.SPACE;
+			env.changedLine = 0;
 		}
 	}
 

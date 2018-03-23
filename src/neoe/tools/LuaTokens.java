@@ -57,6 +57,10 @@ public class LuaTokens {
 			int level = peekLongBrackets();
 			if (level < 0) {
 				readUntil("\n");
+				if (p < txt.length()) {
+					sb.setLength(sb.length() - 1);
+					p--;
+				}
 			} else {
 				readUntilLongBrackets(level);
 			}
@@ -77,7 +81,7 @@ public class LuaTokens {
 					sb.append(txt.charAt(p++));
 				}
 			}
-//			readUntil("" + (char) c);
+			// readUntil("" + (char) c);
 			return submit(type, sb.toString());
 		} else {
 			int level = peekLongBrackets();

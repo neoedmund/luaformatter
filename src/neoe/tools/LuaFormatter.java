@@ -177,7 +177,7 @@ public class LuaFormatter {
 			addSpace();
 			if (!isMultiLineToken(token)) {
 				sb.append(normalComment(token.trim()));
-				sb.append("\n");
+				changeLine();
 			} else {
 				sb.append(token);
 			}
@@ -194,7 +194,9 @@ public class LuaFormatter {
 				}
 			}
 			if (cnt <= 0) {
-				sb.append(" ");
+				if (!lastType.equals(LuaTokenType.SPACE)) {
+					sb.append(" ");
+				}
 			} else {
 				if (changedLine > 0) {
 					printIndent();
@@ -268,10 +270,8 @@ public class LuaFormatter {
 					incIndent(token);
 				} else if ("while".equals(token)) {
 					loop(type, "do", null);
-
 				} else if ("for".equals(token)) {
 					loop(type, "do", null);
-
 				} else if ("if".equals(token)) {
 					loop(type, "then", null);
 					incIndent(token);
@@ -279,14 +279,12 @@ public class LuaFormatter {
 				} else if ("repeat".equals(token)) {
 					changeLine();
 					incIndent(token);
-					loop(LuaTokenType.SPACE, "until", null);
+					loop(type, "until", null);
 				}
 
 			}
 
-		} else if (type.equals(LuaTokenType.OPERATOR) && token.startsWith("}"))
-
-		{
+		} else if (type.equals(LuaTokenType.OPERATOR) && token.startsWith("}")) {
 			String key = decIndent();
 			if (changedLine > 0) {
 				printIndent();

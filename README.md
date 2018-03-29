@@ -21,7 +21,6 @@ Files cause formatting error will be picked up automatically and save to .fmt-er
 I have tried several lua formatters online but no one work good, so I wrote this really works thing.
 
 # What should a formatter be?
-* Formatted result should still can be compiled, and correct.
-* A -format-> B -format(again)-> C, B should be same with C.
-* Formatted result should be easy to be read and _beautiful_ .
-* Don't use it on Python sources.
+* Result should still compiles.
+* `A` -format-> `B` -format(again)-> `C`, then `B` should be same with `C`.
+* Result should be _beautiful_ to read.

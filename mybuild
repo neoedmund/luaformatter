@@ -1,6 +1,6 @@
 { /* neoebuild script */
 
 prjs:[
-[luaformatter, "." , { main:  "neoe.tools.LuaFormatter"  }]
+[luaformatter, "." , { main:  "neoe.formatter.lua.LuaFormatter"  }]
 ]
 }

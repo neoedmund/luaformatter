@@ -28,43 +28,6 @@ public class FileIterator implements Iterable<File> {
 		this.sortByName = sortByName;
 	}
 
-	/**
-	 * @param args
-	 * @throws Exception
-	 */
-	public static void main(String[] args) throws Exception {
-		Iterable<File> it = new FileIterator("C:/xxx");
-		int total = 0;
-		int dircnt = 0;
-		int[] linecnt = new int[2];
-		Map<String, Integer> cnt = new HashMap<String, Integer>();
-		for (File f : it) {
-			if (f.isDirectory()) {
-				dircnt++;
-				continue;
-			}
-			total++;
-			String fn = f.getName();
-			int p1 = fn.indexOf(".");
-			if (p1 > 0) {
-				String ext = fn.substring(p1);
-				Integer i = cnt.get(ext);
-				if (i == null) {
-					cnt.put(ext, 1);
-				} else {
-					cnt.put(ext, i + 1);
-				}
-				if (ext.equalsIgnoreCase(".xxx")) {
-					getLineCnt(f, linecnt);
-				}
-			}
-
-			System.out.println(f.getAbsolutePath());
-
-		}
-		System.out.println(cnt);
-		System.out.println(linecnt[0] + "," + linecnt[1] + "," + (linecnt[1] * 100 / linecnt[0]) + "%");
-	}
 
 	private static int getLineCnt(File f, int[] linecnt) throws Exception {
 		int cnt = 0;

@@ -425,7 +425,7 @@ public class LuaFormatter {
  *  stat ::= while exp do block end
 	stat ::= repeat block until exp
 	stat ::= if exp then block {elseif exp then block} [else block] end
-	stat ::= for Name ‘=’ exp ‘,’ exp [‘,’ exp] do block end
+	stat ::= for Name '=' exp ',' exp [',' exp] do block end
 	stat ::= for namelist in explist do block end
 	function f () body end
  * 

@@ -193,7 +193,7 @@ public class LuaFormatter {
 
 	}
 
-	static class Env {
+	public static class Env {
 		LuaTokenType lastType = LuaTokenType.SPACE;
 		int indent;
 		int changedLine;

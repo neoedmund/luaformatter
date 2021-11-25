@@ -16,7 +16,7 @@ public class LuaTokens {
 
 	StringBuilder sb = new StringBuilder();
 
-	public Object[] next() {
+	public TypeAndValue next() {
 		if (p >= txt.length())
 			return null;
 
@@ -115,8 +115,34 @@ public class LuaTokens {
 	// return "[]{}()".indexOf(c) >= 0;
 	// }
 
-	private Object[] submit(LuaTokenType type, String s) {
-		return new Object[] { type, s };
+	public static class TypeAndValue {
+		private final LuaTokenType type;
+		private final String value;
+
+		public TypeAndValue(LuaTokenType type, String value) {
+			this.type = type;
+			this.value = value;
+		}
+
+		public LuaTokenType getType() {
+			return type;
+		}
+
+		public String getValue() {
+			return value;
+		}
+
+		@Override
+		public String toString() {
+			return "TypeAndValue{" +
+					"type=" + type +
+					", value='" + value + '\'' +
+					'}';
+		}
+	}
+
+	private TypeAndValue submit(LuaTokenType type, String s) {
+		return new TypeAndValue(type, s);
 	}
 
 	// private boolean isOperator(char c) {
